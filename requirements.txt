@@ -1,0 +1,4 @@
+opencv-python
+# 0.10.14 is the last line with the legacy mp.solutions API used here; 1.x removed it
+mediapipe==0.10.14
+numpy
