@@ -2,21 +2,12 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
+from reps import RepCounter, calculate_angle
+
 mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 
-# Elbow angle thresholds for a rep (push-ups, pull-ups, dips)
-UP_ANGLE = 160    # arm extended
-DOWN_ANGLE = 90   # arm bent
 MIN_VISIBILITY = 0.5
-
-
-def calculate_angle(a, b, c):
-    """Angle at point b (in degrees) formed by points a-b-c."""
-    a, b, c = np.array(a), np.array(b), np.array(c)
-    radians = np.arctan2(c[1] - b[1], c[0] - b[0]) - np.arctan2(a[1] - b[1], a[0] - b[0])
-    angle = np.abs(np.degrees(radians))
-    return 360 - angle if angle > 180 else angle
 
 
 def get_arm(landmarks, side):
@@ -36,8 +27,7 @@ def main():
               "and that camera access is allowed in Windows privacy settings.")
         return
 
-    counter = 0
-    stage = None
+    reps = RepCounter()
 
     while cap.isOpened():
         ret, frame = cap.read()
@@ -66,14 +56,7 @@ def main():
             if vis > MIN_VISIBILITY:
                 angle = calculate_angle(shoulder, elbow, wrist)
 
-                # Rep logic: count once the arm returns to extended after a bend
-                if angle < DOWN_ANGLE:
-                    stage = "down"
-                elif angle > UP_ANGLE and stage == "down":
-                    stage = "up"
-                    counter += 1
-                elif angle > UP_ANGLE:
-                    stage = "up"
+                reps.update(angle)
 
                 elbow_px = tuple(np.multiply(elbow, [w, h]).astype(int))
                 cv2.putText(image, f"{int(angle)}", elbow_px,
@@ -88,9 +71,9 @@ def main():
         # Stats panel
         cv2.rectangle(image, (0, 0), (260, 80), (40, 40, 40), -1)
         cv2.putText(image, "REPS", (15, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
-        cv2.putText(image, str(counter), (15, 68), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (255, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(image, str(reps.count), (15, 68), cv2.FONT_HERSHEY_SIMPLEX, 1.6, (255, 255, 255), 2, cv2.LINE_AA)
         cv2.putText(image, "STAGE", (120, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
-        cv2.putText(image, (stage or "-").upper(), (120, 62), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2, cv2.LINE_AA)
+        cv2.putText(image, (reps.stage or "-").upper(), (120, 62), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2, cv2.LINE_AA)
         if angle is None:
             cv2.putText(image, "Arm not visible", (15, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2, cv2.LINE_AA)
 
@@ -100,7 +83,7 @@ def main():
         if key == ord("q"):
             break
         if key == ord("r"):
-            counter, stage = 0, None
+            reps.reset()
 
     cap.release()
     cv2.destroyAllWindows()

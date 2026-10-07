@@ -44,10 +44,29 @@ python tracker.py
 
 ## Configuration
 
-To tune rep detection, edit the thresholds at the top of `tracker.py`:
+To tune rep detection, edit the thresholds in `reps.py`:
 
 ```python
 UP_ANGLE = 160        # arm counts as extended above this
 DOWN_ANGLE = 90       # arm counts as bent below this
+```
+
+and the landmark confidence cut-off in `tracker.py`:
+
+```python
 MIN_VISIBILITY = 0.5  # ignore the arm when landmark confidence is lower
+```
+
+The gap between the two angles is deliberate: landmark positions jitter by a
+few degrees from frame to frame, and a single threshold would count that
+jitter as extra reps.
+
+## Tests
+
+The angle calculation and rep counting live in `reps.py`, which depends only on
+NumPy, so they can be tested without a webcam:
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
 ```
