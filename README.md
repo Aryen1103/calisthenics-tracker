@@ -33,6 +33,16 @@ pip install -r requirements.txt
 python tracker.py
 ```
 
+To use another camera, or count reps in a recorded video instead of a live
+webcam, pass `--source`:
+
+```bash
+python tracker.py --source 1               # second camera
+python tracker.py --source pushups.mp4     # video file
+```
+
+The final rep count is printed when the window closes or the video ends.
+
 > `mediapipe` is pinned to `0.10.14`. MediaPipe 1.x removed the `mp.solutions` API this project uses.
 
 ## Controls

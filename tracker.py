@@ -1,3 +1,5 @@
+import argparse
+
 import cv2
 import mediapipe as mp
 import numpy as np
@@ -19,14 +21,27 @@ def get_arm(landmarks, side):
     return (*points, visibility)
 
 
+def parse_source(value):
+    """A camera index such as 0 or 1, or a path to a video file."""
+    return int(value) if value.isdigit() else value
+
+
 def main():
-    pose = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.7)
-    cap = cv2.VideoCapture(0)
+    parser = argparse.ArgumentParser(description="Count calisthenics reps from a webcam or a video file.")
+    parser.add_argument("--source", type=parse_source, default=0,
+                        help="camera index (default 0) or path to a video file")
+    args = parser.parse_args()
+
+    cap = cv2.VideoCapture(args.source)
     if not cap.isOpened():
-        print("Could not open webcam. Check it isn't in use by another app "
-              "and that camera access is allowed in Windows privacy settings.")
+        if isinstance(args.source, int):
+            print(f"Could not open camera {args.source}. Check it isn't in use by another app "
+                  "and that camera access is allowed in Windows privacy settings.")
+        else:
+            print(f"Could not open video file {args.source!r}.")
         return
 
+    pose = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.7)
     reps = RepCounter()
 
     while cap.isOpened():
@@ -88,6 +103,7 @@ def main():
     cap.release()
     cv2.destroyAllWindows()
     pose.close()
+    print(f"Reps: {reps.count}")
 
 
 if __name__ == "__main__":
